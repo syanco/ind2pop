@@ -10,7 +10,7 @@ Code for producing empirical examples associated with draft ms using mixture dis
 * Save out the conda env (niche_mix) 
 * Send proj to HPC to start annotations
 * Build WF script to separate the anlysis and plots from the annotation steps
-* Check with John to see if his MOL script can remian on a public github...
+* Put MOL downloader into .gitignore
 
 
 ## Activity log
