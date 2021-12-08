@@ -182,7 +182,7 @@ estPopVar <- function(var, means, pop_mean){
   vec <- c()
   
   for(i in 1:n){
-    vec[i] <- (1/n)*(var[i] + means[i]^2 - pop_mean^2)
+    vec[i] <- (1/n)*(var[i] + (means[i]^2 - pop_mean^2))
   }
   
   out <- sum(vec)
