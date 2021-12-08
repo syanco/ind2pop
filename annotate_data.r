@@ -27,12 +27,16 @@ message("Loading movement data...")
 elephants <- read.csv("data/African elephants in Etosha National Park (data from Tsalyuk et al. 2018).csv") %>% 
   rename(lng = location.long,
          lat = location.lat) %>% 
-  mutate(date = as_date(timestamp))
+  mutate(date = as_date(timestamp))%>% 
+  filter(!is.na(lng),
+         !is.na(lat))
 
 storks <- read.csv("data/MPIO white stork lifetime tracking data (2013-2014)-gps.csv") %>% 
   rename(lng = location.long,
          lat = location.lat) %>% 
-  mutate(date = as_date(timestamp))
+  mutate(date = as_date(timestamp)) %>% 
+  filter(!is.na(lng),
+         !is.na(lat))
 
 
 #-- GBIF/MOL Data 
@@ -109,7 +113,7 @@ write.csv(elephants_anno, file = "data/elephants_annotated.csv")
 
 # Storks
 message("Annotating stork movements...")
-storks_anno <- big_stoat(data = storks, vars = vars)
+storks_anno <- big_stoat(data = storks[401:500,], vars = vars)
 
 # write to file to avoid re-annotating
 write.csv(storks_anno, file = "data/storks_annotated.csv")
