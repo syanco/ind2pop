@@ -45,23 +45,46 @@ source("src/funs/niche_funs.r")
 
 #-- Individual Data 
 
-elephants_anno <- read.csv("data/elephants_annotated.csv")
+elephants_anno <- read.csv("data/data/elephants_annotated.csv")
 
-storks_anno <- read.csv("data/storks_annotated.csv")
+storks_anno <- read.csv("data/data/storks_annotated.csv")
 
-# # Create bounding box to restrict GBIF records to region of interest
-# bb_ele <- data.frame(maxlat = max(elephants$lat),
-#                      minlat = min(elephants$lat),
-#                      maxlon = max(elephants$lng),
-#                      minlon = min(elephants$lng))
+# Create bounding box to restrict GBIF records to region of interest
+bb_ele <- data.frame(maxlat = max(elephants_anno$lat),
+                     minlat = min(elephants_anno$lat),
+                     maxlon = max(elephants_anno$lng),
+                     minlon = min(elephants_anno$lng))
+
+bb_sto <- data.frame(maxlat = max(storks_anno$lat),
+                     minlat = min(storks_anno$lat),
+                     maxlon = max(storks_anno$lng),
+                     minlon = min(storks_anno$lng))
 
 #-- GBIF/MOL Data 
 
-elephants_mol_anno <- read.csv("data/cranes_mol_annotated.csv")
+elephants_mol_anno <- read.csv("data/data/elephants_mol_annotated.csv") %>% 
+  filter(lng < bb_ele$maxlon & lng > bb_ele$minlon,
+         lat < bb_ele$maxlat & lat > bb_ele$minlat)
 
-stork_mol_anno <- read.csv("data/stork_mol_annotated.csv")
+stork_mol_anno <- read.csv("data/data/stork_mol_annotated.csv") %>% 
+  filter(lng < bb_sto$maxlon & lng > bb_sto$minlon,
+         lat < bb_sto$maxlat & lat > bb_sto$minlat)
 
 #------------------------------------------------------------------------------#
+
+
+
+#----   Check for overlapping records   ----#
+
+# Check for records in common between MOL and MoveBank data
+
+which(elephants_anno$lng %in% elephants_mol_anno$lng) %in% which(elephants_anno$lat %in% elephants_mol_anno$lat)
+which(storks_anno$lng %in% stork_mol_anno$lng) %in% which(storks_anno$lat %in% stork_mol_anno$lat)
+
+# no records with matching lat and long, i.e. no overlap between MOL and MoveBank
+
+#------------------------------------------------------------------------------#
+
 
 
 
@@ -92,10 +115,10 @@ vc_mean_ele <- fixef(fm_ele)
 
 #- Storks
 
-fm_stork <- lmer(value ~ 1 + (1|individual.local.identifier), data = elephants_anno)
-vc_stork <- as.data.frame(VarCorr(fm_ele))
-vc_var_stork <- sum(vc_ele$vcov)
-vc_mean_stork <- fixef(fm_ele)
+fm_stork <- lmer(value ~ 1 + (1|individual.local.identifier), data = storks_anno)
+vc_stork <- as.data.frame(VarCorr(fm_stork))
+vc_var_stork <- sum(vc_stork$vcov)
+vc_mean_stork <- fixef(fm_stork)
 
 
 #-- New Method
@@ -126,7 +149,7 @@ ind_sum_storks <- storks_anno %>%
 
 # make population estimates
 (mix_mean_storks <-mean(na.omit(ind_sum_storks$mu))) 
-(mix_var_cranes <- estPopVar(var= na.omit(ind_sum_storks$var), 
+(mix_var_storks <- estPopVar(var= na.omit(ind_sum_storks$var), 
                              means = na.omit(ind_sum_storks$mu),
                              pop_mean = mix_mean_storks))
 
@@ -161,10 +184,10 @@ mean_con_storks <- c()
 for(i in 1:nrow(ind_sum_storks)){
   contrib_storks[i] <- indContrib(ind_sum_storks$mu[i], 
                                   ind_sum_storks$var[i], 
-                                  mu_pop = pop_mean_storks, 
+                                  mu_pop = pop_mean_stork, 
                                   n = nrow(ind_sum_storks))
   mean_con_storks[i] <- muContrib(ind_sum_storks$mu[i], 
-                                  mu_pop = pop_mean_storks, 
+                                  mu_pop = pop_mean_stork, 
                                   n = nrow(ind_sum_storks))
 }
 ind_sum_storks$tot_contrib <- contrib_storks
@@ -183,8 +206,8 @@ row.names(df_ele) <- c("Mixture Dist Est", "RE Var Components", "Pop Est")
 df_ele
 
 #- Storks
-df_storks <- data.frame(mu = c(mix_mean_storks, vc_mean_storks, pop_mean_storks),
-                        var = c(mix_var_storks, vc_var_storks, pop_var_storks))
+df_storks <- data.frame(mu = c(mix_mean_storks, vc_mean_stork, pop_mean_stork),
+                        var = c(mix_var_storks, vc_var_stork, pop_var_stork))
 row.names(df_storks) <- c("Mixture Dist Est", "RE Var Components", "Pop Est")
 df_storks
 

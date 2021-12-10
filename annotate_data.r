@@ -113,7 +113,7 @@ write.csv(elephants_anno, file = "data/elephants_annotated.csv")
 
 # Storks
 message("Annotating stork movements...")
-storks_anno <- big_stoat(data = storks[401:500,], vars = vars)
+storks_anno <- big_stoat(data = storks, vars = vars)
 
 # write to file to avoid re-annotating
 write.csv(storks_anno, file = "data/storks_annotated.csv")
