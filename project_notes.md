@@ -6,12 +6,8 @@ Code for producing empirical examples associated with draft ms using mixture dis
   Scott Yanco, PhD  
   scott.yanco@yale.edu
 
-## TODO
-* Save out the conda env (niche_mix) 
-* Send proj to HPC to start annotations
-* Build WF script to separate the anlysis and plots from the annotation steps
-* Put MOL downloader into .gitignore
-
+## TODO  
+* Need to clean up comments and workflow, move old code to an ignored dir.
 
 ## Activity log
 
@@ -21,11 +17,12 @@ Code for producing empirical examples associated with draft ms using mixture dis
 |2021-12-01|Simplifying approach...|
 |2021-12-09|Modifying workflow, working with cranes and elephants, annos on HPC|
 |2022-01-11|New year!  Picking this back up, swapped storks for Gadwall and making figs|
-|2022-01-12|Worked up trees, working on figs|
+|2022-01-12|Worked up trees, uploaded figs to draft ms|
+|2022-01-13|Wrote out cona envs, cleaning project docs|
 
 ## Notes
 *  Should be able to do this more simply than breezy-style or with mosey db.  Thus trying to build entire workflow as a single r script (calling a couple external function scripts)
 
 *No STOAT pre-annotations for trees....  Request batch?  Also, though, is FIA in mol.org? Might skip the plants
 
-*Might try LST - WJ suggested that EVI may be particularity ammenable to this...
+*Might try LST - WJ suggested that EVI may be particularity amenable to this...
