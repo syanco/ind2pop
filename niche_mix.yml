@@ -1,5 +1,6 @@
 name: niche_mix
 channels:
+  - local
   - syanco
   - conda-forge
   - bioconda
@@ -46,7 +47,7 @@ dependencies:
   - importlib-metadata=4.8.2=py38h578d9bd_0
   - importlib_resources=5.4.0=pyhd8ed1ab_0
   - ipykernel=6.5.1=py38he5a9106_0
-  - ipython
+  - ipython=7.30.0=py38h578d9bd_0
   - ipython_genutils=0.2.0=py_1
   - jbig=2.1=h7f98852_2003
   - jedi=0.18.1=py38h578d9bd_0
