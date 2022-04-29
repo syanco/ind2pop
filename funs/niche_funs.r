@@ -176,13 +176,14 @@ indNicheAccum <- function(ind_ID, data, interval, min_obs = 2, vars){
 #-- Individual to Population Functions  --##
 
 # Anticipates vector of sample means, vector of sample variances
-estPopVar <- function(var, means, pop_mean){
+estPopVar <- function(var, means, pop_mean, w = NULL){
   n <- length(var)
+  ifelse(is.null(w), w <- 1/n, w <- w)
   
   vec <- c()
   
   for(i in 1:n){
-    vec[i] <- (1/n)*(var[i] + (means[i]^2 - pop_mean^2))
+    vec[i] <- w*(var[i] + (means[i]^2 - pop_mean^2))
   }
   
   out <- sum(vec)
@@ -201,4 +202,103 @@ indContrib <- function(mu_i, var_i, mu_pop, n){
 muContrib <- function(mu_i, mu_pop, n){
   cont <- (1/n)*(mu_i^2 - mu_pop^2)
   return(cont)
+}
+
+individual_contribution <- function(x, w = NULL) {
+  # x is the individual parameter data, columns are mu and sigma (note that it is the sd not the variance),
+  # but the returned population sigma2 is the variance
+  n = nrow(x)
+  if(!is.null(w)) n = w
+  mu_i = x[,"mu"]
+  sigma_i = x[,"sigma"]
+  mu = mean(mu_i)
+  marginality_sigma2 = (mu_i^2 - mu^2)/n
+  specialization_sigma2 = (sigma_i^2)/n
+  sigma2 = sum(marginality_sigma2) + sum(specialization_sigma2)
+  marginality_skew = (mu_i^3 - mu^3)/(n*sigma2^(3/2))
+  specialization_skew = (3*mu_i*(sigma_i^2)-3*mu*sigma2)/(n*sigma2^(3/2))
+  skew = sum(marginality_skew) + sum(specialization_skew)
+  
+  return(cbind(mu_pop = mu,marginality_sigma2 = marginality_sigma2,
+               specialization_sigma2 = specialization_sigma2,
+               sigma2_pop = sigma2,
+               marginality_skew = marginality_skew,
+               specialization_skew = specialization_skew,
+               skew_pop = skew))
+}
+
+
+# Creates n bootstrapped samples from individual niche parameters for use in 
+# calculating confidence intervals. df is the dataframe of individual niche 
+# parameters and n is the number of bootstrapped samples to take. Returns a list
+# of length n each element of which is a re-sampled df of length nrow(df). A
+# user could call this manually, but it's intended as a sub-function called by 
+# the CI function
+niche_boot <- function(df, n = 1000){
+  new <- list()
+  for(i in 1:n){
+    nr <- nrow(df)
+    idx <- sample(1:nr, size = nr, replace = T)
+    new[[i]] <- df[idx,]
+  }  
+  return(new)
+}
+
+# Generates bootstrapped CIs for population mean as estimated from individuals.  
+# Calls niche_boot to generate bootsrapped samples.
+mean_CIs <- function(df, n = 1000, ci_l = 0.025, ci_h = 0.975){
+  new <- niche_boot(df=df, n=n)
+  mean_vec <- c()
+  for(i in 1:length(new)){
+    mean_vec[i] <- mean(na.omit(new[[i]]$mu)) 
+  }
+  CIs <- quantile(mean_vec, probs = c(ci_l, ci_h)) 
+  return(CIs)
+}
+
+# Generates bootstrapped CIs for population niche breadth as estimated from individuals.  
+# Calls niche_boot to generate bootstrapped samples.
+var_CIs <- function(df, n = 1000, ci_l = 0.025, ci_h = 0.975){
+  
+  # run bootstrap re-samples
+  new <- niche_boot(df=df, n=n)
+  
+  #create empty vector for results
+  var_vec <- c()
+  
+  # loop through bootstrap draws
+  for(i in 1:length(new)){
+    # get grand mean
+    grand_mean <- mean(na.omit(new[[i]]$mu))
+    
+    #estimate pop var using ind2pop meethod (mixture dist)
+    var_vec[i] <- estPopVar(var= na.omit(new[[i]]$var), 
+                              means = na.omit(new[[i]]$mu),
+                              pop_mean = grand_mean) 
+  }
+  CIs <- quantile(var_vec, probs = c(ci_l, ci_h)) 
+  return(CIs)
+}
+
+# based on https://stackoverflow.com/questions/67818541/extract-confidence-interval-for-a-combination-sum-of-variance-estimates-from-a
+# gets bootstrapped CIs for pooled variance from a variance components lmm
+get_total_var_CIs <- function(mod) {
+  varCorr_df <- as.data.frame(VarCorr(mod))
+  components <- varCorr_df[['vcov']]
+  names(components) <- varCorr_df[['grp']]
+  
+  var_total <- sum(components)
+  
+  c(components, "Total" = var_total)
+}
+
+# estimates CIs variance using chi-sq distribution.
+# can be used to get pooled variance CI (wheer n = n_samples + n_groups [we think...])
+var_CI_chi <- function(var, n, alpha){
+  a <- 1-(alpha/2)
+  b <- alpha/2
+  lower_lim <- qchisq(b, n)
+  upper_lim <- qchisq(a, n)
+  return(c((n-1)*var/upper_lim,(n-1)*var/lower_lim))
+  
 }

@@ -9,6 +9,9 @@ library(sf)
 library(ggmap)
 library(RColorBrewer)
 
+# Seperate file to register static google maps api key not inlcuded in repo)
+source("src/init/google_reg.r")
+
 world <- ne_countries(returnclass = "sf")
 
 ##---- Elephants ----##
@@ -48,11 +51,12 @@ ele_bg <- get_googlemap(center = cent, zoom = 8, maptype = "terrain",
           axis.ticks=element_blank())
 )
 
-ggsave(filename = "out/figs/elemap_main.png", ele_main, height = 2, width = 3)
-ggsave(filename = "out/figs/elemap_inset.png", ele_inset, height = 1.25, width = 1.25)
+ggsave(filename = "out/figs/elemap_main.png", ele_main)
+ggsave(filename = "out/figs/elemap_inset.png", ele_inset)
 
 
 ##---- Gawall ----##
+
 europe <- world[world$continent == "Europe",]
 
 gad <- read.csv("data/gadwall_annotated.csv") %>% 
