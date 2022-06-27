@@ -178,12 +178,12 @@ indNicheAccum <- function(ind_ID, data, interval, min_obs = 2, vars){
 # Anticipates vector of sample means, vector of sample variances
 estPopVar <- function(var, means, pop_mean, w = NULL){
   n <- length(var)
-  ifelse(is.null(w), w <- 1/n, w <- w)
+  ifelse(is.null(w), w <- rep(1/n, n), w <- w)
   
   vec <- c()
   
   for(i in 1:n){
-    vec[i] <- w*(var[i] + (means[i]^2 - pop_mean^2))
+    vec[i] <- w[i]*(var[i] + (means[i]^2 - pop_mean^2))
   }
   
   out <- sum(vec)

@@ -38,8 +38,8 @@ library(patchwork)
 library(ggpubr)
 
 #-- Init
-fig_w <- 3
-fig_h <- 3
+fig_w <- 3.2
+fig_h <- 3.2
 
 # Separate file to register static google maps api key not included in repo)
 source("src/init/google_reg.r")
@@ -62,13 +62,13 @@ gad_anno2 <- gad_anno %>%
 gad_dens <- ggplot()+
   geom_density(data = gad_anno2, aes(x = value,
                                      group = individual.local.identifier,
-                                     color = fut_w2),
+                                     color = vuln),
                bw = 2.5) +
     # scale_color_gradient2(low = "red", mid = "white", high = "blue")+
-    scale_color_viridis_c(direction = -1) +
+    scale_color_viridis_c(direction = 1) +
     xlab("Temperature (c)")+
-  theme_minimal()+
-  theme(legend.position = "none")
+  theme_linedraw() +
+theme(legend.position = "none")
 
 # Save plot
 ggsave(filename = "out/figs/gad_dens.png", gad_dens, width = fig_w, 
@@ -78,27 +78,36 @@ ggsave(filename = "out/figs/gad_dens.png", gad_dens, width = fig_w,
 
 message("Creating bivariate plot...")
 
+dev.new(width=fig_w, height=fig_h)
 # Create plot
 gad_bivar <- ggplot(gad_fut) +
-    geom_point(aes(x=mu, y = specialization_sigma2, color = sk, 
-                   size = fut_w2))+
-    scale_size_continuous() +
-    scale_color_gradient2(low = "red", mid = "white", high = "blue")+
-        # scale_color_viridis_c(direction = -1, name = "Skew", rescaler = center_around(0)) +
+    geom_point(aes(x=mu, y = specialization_sigma2, size = sk, 
+                   color = vuln), alpha = .7)+
+    scale_size_continuous(name = "Skewness") +
+    # scale_color_gradient2(low = "red", mid = "white", high = "blue")+
+        scale_color_viridis_c(direction = 1, name = "Vulnerability") +
     xlab("Niche Position") + 
     ylab("Niche Breadth") +
     theme_linedraw()+
     guides(color = guide_colorbar(title.position = "top",
                                 title.hjust = 0.5))+
-    theme(legend.position="bottom", legend.justification = "center")
+    theme(legend.position="bottom", legend.justification = "center",
+          legend.text=element_text(size=6),
+          legend.title=element_text(size=8))
 
-# save plot
-ggsave(filename = "out/figs/gad_bivar.png", gad_bivar, width = fig_w, 
-       height = fig_h, units = "in")
 
 #Extract and save legend
-leg <- get_legend(gad_bivar)
-ggsave(filename = "out/figs/leg.png", as_ggplot(leg))
+leg <- cowplot::get_legend(gad_bivar)
+# ggsave(filename = "out/figs/leg.png", as_ggplot(leg), dpi = 600)
+ggsave(filename = "out/figs/leg.png", leg, dpi = 600)
+
+
+# Make legend-less plot
+gad_bivar_nl <- gad_bivar + theme(legend.position = "none")
+
+# save plot
+ggsave(filename = "out/figs/gad_bivar.png", gad_bivar_nl, width = fig_w, 
+       height = fig_h, units = "in")
 
 #---- Climate Vulnerability ----#
 
@@ -142,19 +151,32 @@ fut_gad_pop_sim <- data.frame(type = c(rep("Future", 10000),
                                              sd = sqrt(mix_var_gad)))
 )
 
+
+dev.new(width=fig_w, height=fig_h)
+
 # Create plot
 fut_gad_plot <- ggplot(fut_gad_pop_sim) +
     stat_density(aes(x = sims, color = type), geom = "line", position = "identity")+
-    scale_color_manual(values = c("black", "red"), name = "Population Niche") +
+    scale_color_manual(values = c("black", "red"), name = "Pop. Niche") +
     theme_linedraw() +
     theme(legend.position = c(0.85, 0.85),
           legend.background = element_rect(linetype="solid", 
-                                           color= "black")) +
+                                           color= "black"),
+          legend.text=element_text(size=6),
+          legend.title=element_text(size=8)) +
     xlab("Temperature")
+#Extract and save legend
+leg2 <- cowplot::get_legend(fut_gad_plot)
+# ggsave(filename = "out/figs/leg.png", as_ggplot(leg), dpi = 600)
+ggsave(filename = "out/figs/leg_fut.png", leg2, dpi = 600)
+
+
+# Make legend-less plot
+fut_gad_nl <-fut_gad_plot + theme(legend.position = "none")
 
 # Save plot
-ggsave(filename = "out/figs/gad_fut.png", fut_gad_plot, width = 6, 
-       height = 6, units = "in")
+ggsave(filename = "out/figs/gad_fut.png", fut_gad_nl, width = fig_w, 
+       height = fig_h, units = "in")
 
 #---- Quick Maps
 
@@ -196,9 +218,9 @@ gad_inset <- ggplot() +
         # panel.spacing = unit(c(0, 0, 0, 0), "null")
   )
 
-gad_main <- ggmap(gad_bg, darken = c(0.6, "white")) +
+gad_main <- ggmap(gad_bg, darken = c(0.8, "white")) +
   geom_sf(data = gad, aes(color = individual.local.identifier), 
-          alpha = 0.1, size = 0.4, inherit.aes = F)+
+          alpha = 1, size = 1, inherit.aes = F)+
   theme_bw(base_size = 12) +
   coord_sf(crs = 4326,
            # xlim = c(10.7, 13),
@@ -219,7 +241,7 @@ gad_main <- ggmap(gad_bg, darken = c(0.6, "white")) +
 
 # gad_main + inset_element(gad_inset, 0.6, -0.56, 0.99, 1)
 
-ggsave(filename = "out/figs/gadmap_main.png", gad_main, height = 3, width = 3)
+ggsave(filename = "out/figs/gadmap_main.png", gad_main, height = fig_h, width = fig_w)
 ggsave(filename = "out/figs/gadmap_inset.png", gad_inset, height = 1.25, width = 1.25)
 
 

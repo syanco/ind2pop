@@ -40,6 +40,6 @@ Rscript $wd/src/workflow/calc_niches.r
 conda activate plots
 
 # Run plotting script script
-Rscript $wd/src/workflow/calc_niches.r
+Rscript $wd/src/workflow/make_figs.r
 
 # Run 
