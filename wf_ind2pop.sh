@@ -8,27 +8,38 @@
 #                                     #
 #######################################
 
-#-------------------------------------#
-#---- Build and Populate Mosey DB ----#
-#-------------------------------------#
 
-#TODO: write conda yml to file
-conda activate mosey
+#-----------------------#
+#---- Annotate Data ----#
+#-----------------------#
 
-# Database code derived from github.com/bencarlson/mosey_db
+# Activate conda env
+conda activate niche_mix
 
-# Presumes project directory already exists
+# Declare working directory
 wd=~/projects/ind2pop/
-
-MOSEYDB_SRC=~/projects/mosey_db
-
 cd $wd
 
-# Don't run this if database already exists!
-# Below is commented out to prevent accidental execution
+# Run annotation script
+Rscript $wd/src/workflow/annotate_data.r
 
-# cat $MOSEYDB_SRC/db/create_db.sql | sqlite3 data/mosey.db
 
-csvdir=/projects/ind2pop/data/csvs
+#---------------------------------#
+#---- Calculate Niche Metrics ----#
+#---------------------------------#
 
-$MOSEYDB_SRC/db/load_studies.sh --csvdir $csvdir --process civ
+# Run calculation script
+Rscript $wd/src/workflow/calc_niches.r
+
+
+#--------------------#
+#---- Make Plots ----#
+#--------------------#
+
+# Switch conda env
+conda activate plots
+
+# Run plotting script script
+Rscript $wd/src/workflow/calc_niches.r
+
+# Run 

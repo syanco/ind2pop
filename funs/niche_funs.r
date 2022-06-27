@@ -273,8 +273,8 @@ var_CIs <- function(df, n = 1000, ci_l = 0.025, ci_h = 0.975){
     
     #estimate pop var using ind2pop meethod (mixture dist)
     var_vec[i] <- estPopVar(var= na.omit(new[[i]]$var), 
-                              means = na.omit(new[[i]]$mu),
-                              pop_mean = grand_mean) 
+                            means = na.omit(new[[i]]$mu),
+                            pop_mean = grand_mean) 
   }
   CIs <- quantile(var_vec, probs = c(ci_l, ci_h)) 
   return(CIs)
@@ -302,3 +302,31 @@ var_CI_chi <- function(var, n, alpha){
   return(c((n-1)*var/upper_lim,(n-1)*var/lower_lim))
   
 }
+
+
+individual_contribution <- function(x, ID = "individual.local.identifier", w = NULL) {
+  # x is the individual parameter data, columns are mu and sigma (note that it 
+  # is the sd not the variance),
+  # but the returned population sigma2 is the variance
+  n = nrow(x)
+  if(!is.null(w)) n = w
+  mu_i = x[,"mu"]
+  sigma_i = x[,"sigma"]
+  mu = mean(mu_i$mu)
+  marginality_sigma2 = (mu_i$mu^2 - mu^2)/n
+  specialization_sigma2 = (sigma_i$sigma^2)/n
+  sigma2 = sum(marginality_sigma2) + sum(specialization_sigma2)
+  marginality_skew = (mu_i$mu^3 - mu^3)/(n*sigma2^(3/2))
+  specialization_skew = (3*mu_i$mu*(sigma_i$sigma^2)-3*mu*sigma2)/(n*sigma2^(3/2))
+  skew = sum(marginality_skew) + sum(specialization_skew)
+  
+  return(data.frame(mu_pop = mu,
+               marginality_sigma2 = marginality_sigma2,
+               specialization_sigma2 = specialization_sigma2,
+               sigma2_pop = sigma2,
+               marginality_skew = marginality_skew,
+               specialization_skew = specialization_skew,
+               skew_pop = skew,
+               ID = x %>% pull(ID)))
+}
+

@@ -1,0 +1,258 @@
+###############################################
+####                                       ####
+####    Individual to Population Niches    ####
+####          Scott Yanco, PhD             ####
+####        scott.yanco@yale.edu           ####
+####                                       ####
+###############################################
+
+# This script produces plots and table (except for maps) associated with the 
+# analysis. Specifically produces individual contributions to niche breadth 
+# (decomposed to variance components), pop-level estimates compared with ind2pop 
+# method and lme model, bivariate niche position v breadth plots, and niche 
+# vulnerability plots.
+# 
+# Use "plots" conda env
+
+# Script assumes that data have been previously annotated and empirical analysis 
+# completed and saved to rdata file
+
+
+#----   Output    ----#
+
+#-- Libraries
+library(tidyverse)
+# library(rstoat)
+library(lubridate)
+library(lme4)
+library(glue)
+library(ggplot2)
+library(viridisLite)
+library(lme4)
+library(RColorBrewer)
+library(rnaturalearth)
+library(raster)
+library(sf)
+library(ggmap)
+library(patchwork)
+library(ggpubr)
+
+#-- Init
+fig_w <- 3
+fig_h <- 3
+
+# Separate file to register static google maps api key not included in repo)
+source("src/init/google_reg.r")
+
+
+#-- Load workspace
+message("Loading data...")
+load("out/out.Rdata")
+
+
+#---- Density Plot ----#
+
+message("Creating density plot...")
+
+# Join observed data with projected future data
+gad_anno2 <- gad_anno %>% 
+  left_join(gad_fut, by = c("individual.local.identifier" = "ID"))
+
+# Create plot
+gad_dens <- ggplot()+
+  geom_density(data = gad_anno2, aes(x = value,
+                                     group = individual.local.identifier,
+                                     color = fut_w2),
+               bw = 2.5) +
+    # scale_color_gradient2(low = "red", mid = "white", high = "blue")+
+    scale_color_viridis_c(direction = -1) +
+    xlab("Temperature (c)")+
+  theme_minimal()+
+  theme(legend.position = "none")
+
+# Save plot
+ggsave(filename = "out/figs/gad_dens.png", gad_dens, width = fig_w, 
+       height = fig_h, units = "in")
+
+#---- Bivariate Plot ----#
+
+message("Creating bivariate plot...")
+
+# Create plot
+gad_bivar <- ggplot(gad_fut) +
+    geom_point(aes(x=mu, y = specialization_sigma2, color = sk, 
+                   size = fut_w2))+
+    scale_size_continuous() +
+    scale_color_gradient2(low = "red", mid = "white", high = "blue")+
+        # scale_color_viridis_c(direction = -1, name = "Skew", rescaler = center_around(0)) +
+    xlab("Niche Position") + 
+    ylab("Niche Breadth") +
+    theme_linedraw()+
+    guides(color = guide_colorbar(title.position = "top",
+                                title.hjust = 0.5))+
+    theme(legend.position="bottom", legend.justification = "center")
+
+# save plot
+ggsave(filename = "out/figs/gad_bivar.png", gad_bivar, width = fig_w, 
+       height = fig_h, units = "in")
+
+#Extract and save legend
+leg <- get_legend(gad_bivar)
+ggsave(filename = "out/figs/leg.png", as_ggplot(leg))
+
+#---- Climate Vulnerability ----#
+
+message("Creating future population distribution plot...")
+
+# Create df with sim values for plotting
+dens_sims_gad <- ind_sum_gad %>% 
+  group_by(individual.local.identifier) %>% 
+  group_modify(~data.frame(sims = rnorm(100000, mean = .$mu, sd = sqrt(.$var)))) %>% 
+  full_join(gad_fut, by = c("individual.local.identifier" = "ID"))
+
+# dens_gad <- gad_fut_anno %>% 
+#   full_join(gad_fut)
+
+# (vul_plot_gad <- ggplot(dens_gad) +
+#     geom_density(aes(x = value, group = individual.local.identifier, color = fut_w2)) +
+#     scale_color_viridis_c(direction = -1) +
+#     theme_linedraw() +
+#     # theme(legend.position = "none") +
+#     xlab("Temperature")
+# )
+# 
+# (vul_plot_gad <- ggplot(dens_sims_gad) +
+#     geom_density(aes(x = sims, group = individual.local.identifier, color = fut_w)) +
+#     scale_color_viridis_c(direction = -1) +
+#     theme_linedraw() +
+#     theme(legend.position = "none") +
+#     xlab("Temperature")
+# )
+# 
+# ggsave(filename = "out/figs/gad_vuln.png", vul_plot_gad, width = 2.4, 
+#        height = 2.4, units = "in")
+
+#- Future population niche density plot
+
+fut_gad_pop_sim <- data.frame(type = c(rep("Future", 10000), 
+                                       rep("Current", 10000)),
+                              sims = c(rnorm(10000, mean = mix_mean_gad_fut$pop_mu_fut, 
+                                             sd = sqrt(mix_var_gad_fut)),
+                                       rnorm(10000, mean = mix_mean_gad, 
+                                             sd = sqrt(mix_var_gad)))
+)
+
+# Create plot
+fut_gad_plot <- ggplot(fut_gad_pop_sim) +
+    stat_density(aes(x = sims, color = type), geom = "line", position = "identity")+
+    scale_color_manual(values = c("black", "red"), name = "Population Niche") +
+    theme_linedraw() +
+    theme(legend.position = c(0.85, 0.85),
+          legend.background = element_rect(linetype="solid", 
+                                           color= "black")) +
+    xlab("Temperature")
+
+# Save plot
+ggsave(filename = "out/figs/gad_fut.png", fut_gad_plot, width = 6, 
+       height = 6, units = "in")
+
+#---- Quick Maps
+
+message("Creating maps...")
+
+world <- ne_countries(returnclass = "sf")
+
+europe <- world[world$continent == "Europe",]
+
+gad <- read.csv("data/gadwall_annotated.csv") %>% 
+  st_as_sf(coords = c("lng", "lat"), crs = 4326)
+
+gad_cent_sf <- st_as_sfc(st_bbox(gad)) %>% 
+  st_centroid() 
+
+gad_cent <- gad_cent_sf %>% 
+  st_coordinates()
+
+gad_bg <- get_googlemap(center = gad_cent, zoom = 8, maptype = "terrain", 
+                        color = "bw")
+
+gad_inset <- ggplot() +
+  geom_sf(data = europe)+
+  geom_sf(data = gad_cent_sf, color = "firebrick2", size = 3)+
+  coord_sf(crs = 4326,
+           xlim = c(-20, 45), 
+           ylim = c(30, 73))+
+  theme_bw(base_size = 12) +
+  theme(axis.title=element_blank(),
+        axis.text=element_blank(),
+        axis.ticks=element_blank(),
+        axis.ticks.length = unit(0, "mm"),
+        panel.background = element_rect(fill='white'),
+        plot.background = element_rect(color = "transparent", fill = "transparent"),
+        plot.margin = margin(t = 0,  # Top margin
+                             r = 0,  # Right margin
+                             b = 0,  # Bottom margin
+                             l = 0)
+        # panel.spacing = unit(c(0, 0, 0, 0), "null")
+  )
+
+gad_main <- ggmap(gad_bg, darken = c(0.6, "white")) +
+  geom_sf(data = gad, aes(color = individual.local.identifier), 
+          alpha = 0.1, size = 0.4, inherit.aes = F)+
+  theme_bw(base_size = 12) +
+  coord_sf(crs = 4326,
+           # xlim = c(10.7, 13),
+           # ylim = c(48, 49)
+  ) +
+  annotation_custom(grob = ggplotGrob(gad_inset),
+                    xmin = 13.7, xmax = 14.7,
+                    ymin = 47.5, ymax = 48.5)+
+  theme(legend.position = "none",
+        axis.title=element_blank(),
+        axis.text=element_blank(),
+        axis.ticks=element_blank(),
+        panel.border=element_blank(),
+        plot.margin = margin(t = 0,  # Top margin
+                             r = 0,  # Right margin
+                             b = 0,  # Bottom margin
+                             l = 0))
+
+# gad_main + inset_element(gad_inset, 0.6, -0.56, 0.99, 1)
+
+ggsave(filename = "out/figs/gadmap_main.png", gad_main, height = 3, width = 3)
+ggsave(filename = "out/figs/gadmap_inset.png", gad_inset, height = 1.25, width = 1.25)
+
+
+# 
+# layout <- "
+# AABBBB
+# CCCDDD
+# ##EE##
+# "
+# layout <- c(
+#   area(t = 2, l = 1, b = 5, r = 4),
+#   area(t = 1, l = 3, b = 3, r = 5)
+# )
+# (out_plot <- 
+#     ((gad_main | fut_gad_plot) + plot_layout(widths = c(2,2))) / (gad_bivar | gad_dens) / as_ggplot(leg)+
+#     plot_annotation(tag_levels = list(c('A', 'B', 'C', 'D', '' )))+
+#     plot_layout(guides = "keep"))
+# 
+# (out_plot <- 
+#     ((((gad_main / gad_bivar) | (fut_gad_plot / gad_dens)) + 
+#         plot_layout(widths = c(3,5))) / (as_ggplot(leg)))+
+#     plot_annotation(tag_levels = list(c('A', 'B', 'C', 'D', '' )))+
+#     plot_layout(guides = "keep",
+#                 heights = c(5,5,1)))
+# 
+# (
+#   (((gad_main+inset_element(gad_inset, 0.6, -0.56, 0.99, 1)) | fut_gad_plot)+ 
+#      plot_layout(widths = NA, heights = NA))/ 
+#     (((gad_bivar|gad_dens)+ 
+#         plot_layout(widths = NA, heights = NA))+plot_layout(guides = 'collect')) + plot_layout(heights = c(20,1))
+# ) +
+#   plot_layout(heights = c(8, 10))
+# 
+# 
+# (gad_main+inset_element(gad_inset, 0.6, -0.56, 0.99, 1)
+#   |fut_gad_plot)
