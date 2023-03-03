@@ -36,3 +36,8 @@ Code for producing empirical examples associated with draft ms using mixture dis
 
 *April 13 2022 notes*  
 Swicthed annotation to pull max temp from CMIP5 dataset on GEE.  This allows forwards-backward consistency in modeling.  See TODO for remaining stpes to implementation.
+
+*January 10 2023*
+Yaaa it's been a minute.  Couple items to take care of...  
+-   Mod fig to show climate vuln on map  
+-   Repeat analysis for second speceis to be included as supplement
