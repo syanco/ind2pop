@@ -204,28 +204,30 @@ muContrib <- function(mu_i, mu_pop, n){
   return(cont)
 }
 
-individual_contribution <- function(x, w = NULL) {
-  # x is the individual parameter data, columns are mu and sigma (note that it is the sd not the variance),
-  # but the returned population sigma2 is the variance
-  n = nrow(x)
-  if(!is.null(w)) n = w
-  mu_i = x[,"mu"]
-  sigma_i = x[,"sigma"]
-  mu = mean(mu_i)
-  marginality_sigma2 = (mu_i^2 - mu^2)/n
-  specialization_sigma2 = (sigma_i^2)/n
-  sigma2 = sum(marginality_sigma2) + sum(specialization_sigma2)
-  marginality_skew = (mu_i^3 - mu^3)/(n*sigma2^(3/2))
-  specialization_skew = (3*mu_i*(sigma_i^2)-3*mu*sigma2)/(n*sigma2^(3/2))
-  skew = sum(marginality_skew) + sum(specialization_skew)
-  
-  return(cbind(mu_pop = mu,marginality_sigma2 = marginality_sigma2,
-               specialization_sigma2 = specialization_sigma2,
-               sigma2_pop = sigma2,
-               marginality_skew = marginality_skew,
-               specialization_skew = specialization_skew,
-               skew_pop = skew))
-}
+# individual_contribution <- function(x, w = NULL) {
+#   # x is the individual parameter data, columns are mu and sigma (note that it is the sd not the variance),
+#   # but the returned population sigma2 is the variance
+#   n = nrow(x)
+#   if(!is.null(w)) n = w
+#   mu_i = scale(x[,"mu_i"])
+#   sigma_i = x[,"sigma_i"]
+#   mu = 0
+#   marginality_sigma2 = (mu_i^2 - mu^2)/n
+#   specialization_sigma2 = (sigma_i^2)/n
+#   sigma2 = sum(marginality_sigma2) + sum(specialization_sigma2)
+#   marginality_skew = (mu_i^3 - mu^3)/(n*sigma2^(3/2))
+#   specialization_skew = (3*mu_i*(sigma_i^2)-3*mu*sigma2)/(n*sigma2^(3/2))
+#   skew = sum(marginality_skew) + sum(specialization_skew)
+#   
+#   return(cbind(ID = x$individual.local.identifier,
+#                mu_pop = mu,
+#                marginality_sigma2 = marginality_sigma2,
+#                specialization_sigma2 = specialization_sigma2,
+#                sigma2_pop = sigma2,
+#                marginality_skew = marginality_skew,
+#                specialization_skew = specialization_skew,
+#                skew_pop = skew))
+# }
 
 
 # Creates n bootstrapped samples from individual niche parameters for use in 
@@ -250,7 +252,7 @@ mean_CIs <- function(df, n = 1000, ci_l = 0.025, ci_h = 0.975){
   new <- niche_boot(df=df, n=n)
   mean_vec <- c()
   for(i in 1:length(new)){
-    mean_vec[i] <- mean(na.omit(new[[i]]$mu)) 
+    mean_vec[i] <- mean(na.omit(new[[i]]$mu_i)) 
   }
   CIs <- quantile(mean_vec, probs = c(ci_l, ci_h)) 
   return(CIs)
@@ -269,11 +271,11 @@ var_CIs <- function(df, n = 1000, ci_l = 0.025, ci_h = 0.975){
   # loop through bootstrap draws
   for(i in 1:length(new)){
     # get grand mean
-    grand_mean <- mean(na.omit(new[[i]]$mu))
+    grand_mean <- mean(na.omit(new[[i]]$mu_i))
     
     #estimate pop var using ind2pop meethod (mixture dist)
     var_vec[i] <- estPopVar(var= na.omit(new[[i]]$var), 
-                            means = na.omit(new[[i]]$mu),
+                            means = na.omit(new[[i]]$mu_i),
                             pop_mean = grand_mean) 
   }
   CIs <- quantile(var_vec, probs = c(ci_l, ci_h)) 
@@ -310,14 +312,15 @@ individual_contribution <- function(x, ID = "individual.local.identifier", w = N
   # but the returned population sigma2 is the variance
   n = nrow(x)
   if(!is.null(w)) n = w
-  mu_i = x[,"mu"]
-  sigma_i = x[,"sigma"]
-  mu = mean(mu_i$mu)
-  marginality_sigma2 = (mu_i$mu^2 - mu^2)/n
-  specialization_sigma2 = (sigma_i$sigma^2)/n
+  mu_i = as.numeric(scale(x[,"mu_i"]))
+  sigma_i <- x %>% pull(sigma_i)
+  # mu = mean(mu_i)
+  mu = 0
+  marginality_sigma2 = (mu_i^2 - mu^2)/n
+  specialization_sigma2 = (sigma_i^2)/n
   sigma2 = sum(marginality_sigma2) + sum(specialization_sigma2)
-  marginality_skew = (mu_i$mu^3 - mu^3)/(n*sigma2^(3/2))
-  specialization_skew = (3*mu_i$mu*(sigma_i$sigma^2)-3*mu*sigma2)/(n*sigma2^(3/2))
+  marginality_skew = (mu_i^3 - mu^3)/(n*sigma2^(3/2))
+  specialization_skew = (3*mu_i*(sigma_i^2)-3*mu*sigma2)/(n*sigma2^(3/2))
   skew = sum(marginality_skew) + sum(specialization_skew)
   
   return(data.frame(mu_pop = mu,
@@ -336,9 +339,9 @@ individual_contribution <- function(x, ID = "individual.local.identifier", w = N
 # x = numeric, the value to look up
 getUDVal <- function(x, dat){
   d <- density(na.omit(dat),
-          from = min(na.omit(gad_anno$value)),
-          to = max(na.omit(gad_anno$value)),
-          bw = 2.5)
+               from = min(na.omit(gad_anno$value)),
+               to = max(na.omit(gad_anno$value)),
+               bw = 2.5)
   
   approx <- approxfun(d$x, d$y)
   

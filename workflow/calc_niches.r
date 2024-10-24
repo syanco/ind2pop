@@ -34,7 +34,7 @@ library(moments)
 
 # Custom Functions
 
-source("src/funs/niche_funs.r")
+source("./src/funs/niche_funs.r")
 
 #------------------------------------------------------------------------------#
 
@@ -62,9 +62,9 @@ ind_sum_gad <- gad_anno %>%
   filter(doy > gadstart & doy < gadstop) %>% # this should be redundant 
   # mutate(ind_f = as.factor(individual_id)) %>% 
   group_by(individual.local.identifier) %>% 
-  summarise(mu = mean(na.omit(value)),
-            med = median(na.omit(value)),
-            sigma = sd(na.omit(value)),
+  summarise(mu_i = mean(na.omit(value)),
+            med_i = median(na.omit(value)),
+            sigma_i = sd(na.omit(value)),
             var = var(na.omit(value)),
             n = n(),
             m_lat = mean(lat, na.rm = T),
@@ -81,7 +81,8 @@ skews <- gad_anno %>%
   summarize(sk = skewness(value, na.rm = T))
 
 tot <- individual_contribution(x=ind_sum_gad) %>% 
-  left_join(ind_sum_gad, by = c("ID" = "individual.local.identifier")) %>% 
+  # dplyr::select(-c(mu_i, sigma_i)) %>%
+  left_join(ind_sum_gad, by = c("ID" = "individual.local.identifier")) %>%
   left_join(skews, by = c("ID" = "individual.local.identifier"))
 
 
@@ -89,12 +90,12 @@ tot <- individual_contribution(x=ind_sum_gad) %>%
 # make population estimates
 message("Calculating population/mixture distribution metrics...")
 message("CURRENT POPULATION MEAN AND CIs:")
-(mix_mean_gad <-mean(na.omit(ind_sum_gad$mu))) 
+(mix_mean_gad <-mean(na.omit(ind_sum_gad$mu_i))) 
 (gad_mean_ci <- mean_CIs(ind_sum_gad))
 
 message("CURRENT POPULATION VARIANCE AND CIs")
 (mix_var_gad <- estPopVar(var= na.omit(ind_sum_gad$var), 
-                          means = na.omit(ind_sum_gad$mu),
+                          means = na.omit(ind_sum_gad$mu_i),
                           pop_mean = mix_mean_gad))
 
 (gad_var_ci <- var_CIs(ind_sum_gad))

@@ -293,8 +293,8 @@ load("out/out.Rdata")
 #-- Gadwall
 
 
-(gad_bivar <- ggplot(gad_fut) +
-    geom_point(aes(x=mu, y = var, color = fut_w), size = 1.5)+
+(gad_bivar <- ggplot(tot2) +
+    geom_point(aes(x=mu, y = specialization_sigma2, color = fut_weight), size = 1.5)+
     scale_color_viridis_c(direction = -1) +
     xlab("Niche Position") + 
     ylab("Niche Breadth") +

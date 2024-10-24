@@ -93,13 +93,13 @@ message("Creating bivariate plot...")
 # dev.new(width=fig_w, height=fig_h)
 # Create plot
 (gad_bivar <- ggplot(tot2) +
-    geom_point(aes(x=mu, y = specialization_sigma2, size = sk, 
+    geom_point(aes(x=marginality_sigma2, y = specialization_sigma2,
                    color = fut_weight), alpha = 1)+
     scale_size_continuous(name = "Skewness") +
     # scale_color_gradient2(low = "red", mid = "white", high = "blue")+
     scale_color_viridis_c(direction = 1, name = "Future Weight") +
-    xlab("Niche Position") + 
-    ylab("Niche Breadth") +
+    xlab("Contribution from niche position") + 
+    ylab("Contributions from niche breadth") +
     theme_linedraw()+
     guides(color = guide_colorbar(title.position = "top",
                                   title.hjust = 0.5))+
@@ -129,13 +129,13 @@ message("Creating future population distribution plot...")
 # Create df with sim values for plotting
 dens_sims_gad <- ind_sum_gad %>% 
   group_by(individual.local.identifier) %>% 
-  group_modify(~data.frame(sims = rnorm(100000, mean = .$mu, sd = sqrt(.$var)))) %>% 
+  group_modify(~data.frame(sims = rnorm(100000, mean = .$mu_i, sd = sqrt(.$var)))) %>% 
   full_join(tot2, by = c("individual.local.identifier" = "ID"))
 
 #TODO: this should probably be in the calc_niches or calc vulnerabilities script...
 message("FUTURE POPULATION MEAN AND CIs:")
 (mix_mean_gad_fut <- tot2 %>%
-    mutate(w_mu = fut_weight*mu) %>%
+    mutate(w_mu = fut_weight*mu_i) %>%
     summarise(w_sum = sum(w_mu, na.rm = T),
               pop_mu_fut = w_sum/sum(fut_weight))
 )
@@ -144,7 +144,7 @@ message("FUTURE POPULATION MEAN AND CIs:")
 message("FUTURE POPULATION VARIANCE AND CIs:")
 
 (mix_var_gad_fut <- estPopVar(var= na.omit(tot2$var),
-                              means = na.omit(tot2$mu),
+                              means = na.omit(tot2$mu_i),
                               pop_mean = mix_mean_gad_fut$pop_mu_fut,
                               w = na.omit(tot2$fut_weight)))
 
